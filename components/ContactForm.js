@@ -20,12 +20,35 @@ export default function ContactForm() {
     e.preventDefault();
     setStatus('sending');
 
-    // For now, this will just show a success message
-    // In production, you'd integrate with a service like Formspree, Netlify Forms, or your own backend
-    setTimeout(() => {
-      setStatus('success');
-      setFormData({ name: '', email: '', company: '', message: '' });
-    }, 1000);
+    // Get webhook URL from environment variable
+    const webhookUrl = process.env.NEXT_PUBLIC_CONTACT_WEBHOOK_URL;
+
+    if (!webhookUrl) {
+      console.error('Contact webhook URL not configured');
+      setStatus('error');
+      return;
+    }
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        setStatus('success');
+        setFormData({ name: '', email: '', company: '', message: '' });
+      } else {
+        console.error('Form submission failed:', response.statusText);
+        setStatus('error');
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      setStatus('error');
+    }
   };
 
   return (
@@ -96,6 +119,12 @@ export default function ContactForm() {
       {status === 'success' && (
         <div className="p-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg">
           Thank you for your message! We&apos;ll get back to you soon.
+        </div>
+      )}
+
+      {status === 'error' && (
+        <div className="p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-lg">
+          Sorry, there was an error sending your message. Please try again or email us directly.
         </div>
       )}
 

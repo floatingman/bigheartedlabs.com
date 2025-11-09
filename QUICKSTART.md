@@ -74,6 +74,18 @@ Visit `https://your-domain.com` - your site should be live with HTTPS! 🎉
 
 ## 📝 Common Customizations
 
+### Configure Contact Form
+
+The contact form requires an n8n webhook to function. See [CONTACT_FORM_SETUP.md](CONTACT_FORM_SETUP.md) for detailed setup instructions.
+
+**Quick setup:**
+1. Create an n8n webhook workflow
+2. Add webhook URL to `.env`:
+   ```bash
+   NEXT_PUBLIC_CONTACT_WEBHOOK_URL=https://n8n.yourdomain.com/webhook/contact-form
+   ```
+3. Rebuild: `docker-compose up -d --build` or `npm run export`
+
 ### Update Contact Email
 
 Edit `utils/global-data.js`:
