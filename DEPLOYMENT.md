@@ -4,12 +4,233 @@ This guide will help you deploy the BigHearted Labs consultancy website to your 
 
 ## Table of Contents
 
+- [Docker Deployment with Traefik](#docker-deployment-with-traefik) ⭐ **Recommended for Traefik users**
 - [Prerequisites](#prerequisites)
 - [Server Setup](#server-setup)
 - [Manual Deployment](#manual-deployment)
 - [CI/CD with GitHub Actions](#cicd-with-github-actions)
 - [Updating the Website](#updating-the-website)
 - [Troubleshooting](#troubleshooting)
+
+## Docker Deployment with Traefik
+
+If you're already running Traefik as your reverse proxy on ports 80/443, this is the recommended deployment method. The application will run in a Docker container and Traefik will handle SSL/TLS termination and routing.
+
+> **📘 Already have Traefik running?** See [TRAEFIK_INTEGRATION.md](TRAEFIK_INTEGRATION.md) for detailed instructions on integrating with your existing setup.
+
+### Two Integration Options
+
+#### Option 1: Add to Existing docker-compose.yml (Easiest)
+
+If you have Traefik in a docker-compose.yml file, just add the `bigheartedlabs` service to the same file:
+
+```bash
+# Navigate to where your Traefik docker-compose.yml is located
+cd ~/your-traefik-directory
+
+# Clone this repository
+git clone https://github.com/floatingman/bigheartedlabs.com.git
+
+# Add DOMAIN to your .env file
+echo "DOMAIN=bigheartedlabs.com" >> .env
+```
+
+Then add this service to your existing `docker-compose.yml`:
+
+```yaml
+  bigheartedlabs:
+    build:
+      context: ./bigheartedlabs.com
+      dockerfile: Dockerfile
+    container_name: bigheartedlabs-web
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bigheartedlabs.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.bigheartedlabs.entrypoints=web,websecure"
+      - "traefik.http.routers.bigheartedlabs.tls=true"
+      - "traefik.http.routers.bigheartedlabs.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.bigheartedlabs.loadbalancer.server.port=80"
+```
+
+Deploy:
+```bash
+docker-compose up -d bigheartedlabs
+```
+
+#### Option 2: Separate docker-compose.yml
+
+Keep BigHearted Labs in its own directory with its own docker-compose.yml:
+
+```bash
+# Clone the repository
+git clone https://github.com/floatingman/bigheartedlabs.com.git
+cd bigheartedlabs.com
+
+# Configure
+cp .env.example .env
+nano .env  # Set DOMAIN and CERT_RESOLVER
+
+# Deploy
+docker-compose up -d --build
+```
+
+This works because both compose stacks will be on the same Docker network by default.
+
+### Prerequisites for Docker Deployment
+
+- Docker and Docker Compose installed on your server
+- Traefik running on ports 80/443
+- Traefik configured with a certificate resolver (e.g., `mytlschallenge`, `letsencrypt`)
+- Domain DNS pointing to your server
+
+### Configuration
+
+Edit your `.env` file with these settings:
+
+```bash
+# Your domain name
+DOMAIN=bigheartedlabs.com
+
+# Certificate resolver name (must match your Traefik config)
+# Check your Traefik docker-compose.yml for the cert resolver name
+CERT_RESOLVER=mytlschallenge
+
+# Optional: Enable www subdomain
+WWW_DOMAIN=true
+```
+
+### Verify Deployment
+
+Visit your domain in a browser:
+- `https://bigheartedlabs.com` - Should load your site with HTTPS
+- `http://bigheartedlabs.com` - Should redirect to HTTPS
+
+Check container health:
+```bash
+# View running containers
+docker ps | grep bigheartedlabs
+
+# View application logs
+docker logs bigheartedlabs-web
+```
+
+### Updating
+
+To update the website content:
+
+```bash
+cd ~/path/to/bigheartedlabs.com
+git pull origin main
+docker-compose up -d --build
+
+# Or if integrated into existing compose file:
+cd ~/your-traefik-directory
+docker-compose up -d --build bigheartedlabs
+```
+
+### Advanced Configuration
+
+#### Custom Traefik Middlewares
+
+You can add additional Traefik middlewares by editing the `docker-compose.yml` labels. For example:
+
+**Rate limiting:**
+```yaml
+- "traefik.http.middlewares.ratelimit.ratelimit.average=100"
+- "traefik.http.middlewares.ratelimit.ratelimit.burst=50"
+- "traefik.http.routers.bigheartedlabs.middlewares=security-headers,ratelimit"
+```
+
+**IP whitelist:**
+```yaml
+- "traefik.http.middlewares.ipwhitelist.ipwhitelist.sourcerange=1.2.3.4/32,5.6.7.0/24"
+- "traefik.http.routers.bigheartedlabs.middlewares=security-headers,ipwhitelist"
+```
+
+**Compression:**
+```yaml
+- "traefik.http.middlewares.compression.compress=true"
+- "traefik.http.routers.bigheartedlabs.middlewares=security-headers,compression"
+```
+
+#### Multiple Domains
+
+To serve the site on multiple domains, update the router rule in `docker-compose.yml`:
+
+```yaml
+- "traefik.http.routers.bigheartedlabs.rule=Host(`bigheartedlabs.com`) || Host(`www.bigheartedlabs.com`) || Host(`alternative-domain.com`)"
+```
+
+#### Custom Docker Network
+
+If your Traefik uses a different network name, update the `.env` file:
+
+```bash
+TRAEFIK_NETWORK=your-custom-network-name
+```
+
+### Troubleshooting Docker Deployment
+
+#### Container won't start
+
+```bash
+# Check container logs
+docker-compose logs bigheartedlabs
+
+# Check if port 80 inside container is accessible
+docker exec bigheartedlabs-web wget -O- http://localhost
+```
+
+#### Traefik can't reach the container
+
+```bash
+# Verify container is on Traefik network
+docker network inspect traefik
+
+# Check Traefik logs for routing errors
+docker logs traefik
+
+# Ensure Traefik labels are correct
+docker inspect bigheartedlabs-web | grep traefik
+```
+
+#### SSL certificate issues
+
+```bash
+# Check Traefik dashboard (if enabled) for certificate status
+
+# Verify certificate resolver name matches
+docker inspect bigheartedlabs-web | grep certresolver
+
+# Check Traefik certificate storage
+docker exec traefik cat /letsencrypt/acme.json
+```
+
+#### Website shows 404 or empty page
+
+```bash
+# Check if files were built correctly
+docker exec bigheartedlabs-web ls -la /usr/share/nginx/html
+
+# Verify nginx is serving files
+docker exec bigheartedlabs-web cat /etc/nginx/conf.d/default.conf
+
+# Test nginx configuration
+docker exec bigheartedlabs-web nginx -t
+```
+
+### Docker Deployment Benefits
+
+✅ **Isolated environment** - No conflicts with other services
+✅ **Easy updates** - Just pull and rebuild
+✅ **Consistent deployments** - Same environment everywhere
+✅ **Automatic SSL** - Traefik handles certificates
+✅ **Zero downtime updates** - Docker manages graceful restarts
+✅ **Health checks** - Automatic container restart if unhealthy
+✅ **Resource limits** - Can set CPU/memory limits if needed
+
+---
 
 ## Prerequisites
 

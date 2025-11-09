@@ -1,0 +1,54 @@
+# Standalone docker-compose.yml for BigHearted Labs website
+# This file can be used standalone OR the bigheartedlabs service can be added to your existing docker-compose.yml
+
+version: '3.7'
+
+services:
+  bigheartedlabs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bigheartedlabs-web
+    restart: unless-stopped
+
+    # Traefik labels
+    labels:
+      # Enable Traefik for this service
+      - "traefik.enable=true"
+
+      # HTTPS router
+      - "traefik.http.routers.bigheartedlabs.rule=Host(`${DOMAIN:-bigheartedlabs.com}`)${WWW_DOMAIN:+ || Host(`www.${DOMAIN:-bigheartedlabs.com}`)}"
+      - "traefik.http.routers.bigheartedlabs.entrypoints=web,websecure"
+      - "traefik.http.routers.bigheartedlabs.tls=true"
+      - "traefik.http.routers.bigheartedlabs.tls.certresolver=${CERT_RESOLVER:-mytlschallenge}"
+
+      # Service configuration
+      - "traefik.http.services.bigheartedlabs.loadbalancer.server.port=80"
+
+      # Security headers middleware
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.framedeny=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.contenttypenosniff=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.sslredirect=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.stsSeconds=315360000"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.stsPreload=true"
+      - "traefik.http.routers.bigheartedlabs.middlewares=bigheartedlabs-headers@docker"
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+# Note: If using this as a standalone file with an existing Traefik instance,
+# ensure both are on the same Docker network. You can either:
+# 1. Add this service to your existing docker-compose.yml (recommended)
+# 2. Uncomment the networks section below and ensure it matches your Traefik network
+
+# networks:
+#   default:
+#     external: true
+#     name: ${TRAEFIK_NETWORK:-traefik_default}
