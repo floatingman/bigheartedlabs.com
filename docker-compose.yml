@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  bigheartedlabs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bigheartedlabs-web
+    restart: unless-stopped
+
+    # Networks - connect to Traefik network
+    networks:
+      - traefik
+
+    # Traefik labels
+    labels:
+      # Enable Traefik for this service
+      - "traefik.enable=true"
+
+      # HTTP router
+      - "traefik.http.routers.bigheartedlabs.rule=Host(`${DOMAIN:-bigheartedlabs.com}`)${WWW_DOMAIN:+ || Host(`www.${DOMAIN:-bigheartedlabs.com}`)}"
+      - "traefik.http.routers.bigheartedlabs.entrypoints=websecure"
+      - "traefik.http.routers.bigheartedlabs.tls=true"
+      - "traefik.http.routers.bigheartedlabs.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
+
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.bigheartedlabs-http.rule=Host(`${DOMAIN:-bigheartedlabs.com}`)${WWW_DOMAIN:+ || Host(`www.${DOMAIN:-bigheartedlabs.com}`)}"
+      - "traefik.http.routers.bigheartedlabs-http.entrypoints=web"
+      - "traefik.http.routers.bigheartedlabs-http.middlewares=https-redirect"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
+
+      # Service configuration
+      - "traefik.http.services.bigheartedlabs.loadbalancer.server.port=80"
+
+      # Optional: Add security headers middleware
+      - "traefik.http.middlewares.security-headers.headers.framedeny=true"
+      - "traefik.http.middlewares.security-headers.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.security-headers.headers.contenttypenosniff=true"
+      - "traefik.http.routers.bigheartedlabs.middlewares=security-headers"
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:-traefik}

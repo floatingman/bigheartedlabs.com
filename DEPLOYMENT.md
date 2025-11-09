@@ -4,12 +4,243 @@ This guide will help you deploy the BigHearted Labs consultancy website to your 
 
 ## Table of Contents
 
+- [Docker Deployment with Traefik](#docker-deployment-with-traefik) ⭐ **Recommended for Traefik users**
 - [Prerequisites](#prerequisites)
 - [Server Setup](#server-setup)
 - [Manual Deployment](#manual-deployment)
 - [CI/CD with GitHub Actions](#cicd-with-github-actions)
 - [Updating the Website](#updating-the-website)
 - [Troubleshooting](#troubleshooting)
+
+## Docker Deployment with Traefik
+
+If you're already running Traefik as your reverse proxy on ports 80/443, this is the recommended deployment method. The application will run in a Docker container and Traefik will handle SSL/TLS termination and routing.
+
+### Prerequisites for Docker Deployment
+
+- Docker and Docker Compose installed on your server
+- Traefik running on ports 80/443
+- Traefik configured with a certificate resolver (e.g., Let's Encrypt)
+- A Docker network for Traefik (typically named `traefik`)
+
+### Step 1: Verify Traefik Setup
+
+First, ensure your Traefik setup has the necessary components:
+
+```bash
+# Check if Traefik network exists
+docker network ls | grep traefik
+
+# If it doesn't exist, create it
+docker network create traefik
+
+# Verify Traefik is running
+docker ps | grep traefik
+```
+
+Your Traefik configuration should have:
+- An entrypoint for HTTP (typically named `web` on port 80)
+- An entrypoint for HTTPS (typically named `websecure` on port 443)
+- A certificate resolver configured (e.g., `letsencrypt`)
+
+Example Traefik static configuration (for reference):
+```yaml
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: your-email@example.com
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
+```
+
+### Step 2: Clone Repository on Server
+
+```bash
+# SSH into your server
+ssh your-username@your-server
+
+# Clone the repository
+git clone https://github.com/floatingman/bigheartedlabs.com.git
+cd bigheartedlabs.com
+```
+
+### Step 3: Configure Environment Variables
+
+Create a `.env` file from the example:
+
+```bash
+cp .env.example .env
+```
+
+Edit the `.env` file with your settings:
+
+```bash
+# Required: Your domain name
+DOMAIN=bigheartedlabs.com
+
+# Optional: Enable www subdomain (set to true or false)
+WWW_DOMAIN=true
+
+# Traefik network name (must match your Traefik network)
+TRAEFIK_NETWORK=traefik
+
+# Certificate resolver name (must match your Traefik configuration)
+CERT_RESOLVER=letsencrypt
+```
+
+### Step 4: Build and Deploy
+
+```bash
+# Build and start the container
+docker-compose up -d --build
+
+# Check logs to ensure it started correctly
+docker-compose logs -f bigheartedlabs
+```
+
+### Step 5: Verify Deployment
+
+Visit your domain in a browser:
+- `https://bigheartedlabs.com` - Should load your site with HTTPS
+- `http://bigheartedlabs.com` - Should redirect to HTTPS
+- `https://www.bigheartedlabs.com` - Should also work (if WWW_DOMAIN=true)
+
+Check container health:
+```bash
+# View running containers
+docker ps
+
+# Check container health status
+docker inspect bigheartedlabs-web | grep Health -A 10
+
+# View application logs
+docker-compose logs bigheartedlabs
+```
+
+### Updating the Docker Deployment
+
+When you need to update the website:
+
+```bash
+# Pull latest changes
+git pull origin main
+
+# Rebuild and restart the container
+docker-compose up -d --build
+
+# Remove old images (optional, to save space)
+docker image prune -f
+```
+
+### Advanced Configuration
+
+#### Custom Traefik Middlewares
+
+You can add additional Traefik middlewares by editing the `docker-compose.yml` labels. For example:
+
+**Rate limiting:**
+```yaml
+- "traefik.http.middlewares.ratelimit.ratelimit.average=100"
+- "traefik.http.middlewares.ratelimit.ratelimit.burst=50"
+- "traefik.http.routers.bigheartedlabs.middlewares=security-headers,ratelimit"
+```
+
+**IP whitelist:**
+```yaml
+- "traefik.http.middlewares.ipwhitelist.ipwhitelist.sourcerange=1.2.3.4/32,5.6.7.0/24"
+- "traefik.http.routers.bigheartedlabs.middlewares=security-headers,ipwhitelist"
+```
+
+**Compression:**
+```yaml
+- "traefik.http.middlewares.compression.compress=true"
+- "traefik.http.routers.bigheartedlabs.middlewares=security-headers,compression"
+```
+
+#### Multiple Domains
+
+To serve the site on multiple domains, update the router rule in `docker-compose.yml`:
+
+```yaml
+- "traefik.http.routers.bigheartedlabs.rule=Host(`bigheartedlabs.com`) || Host(`www.bigheartedlabs.com`) || Host(`alternative-domain.com`)"
+```
+
+#### Custom Docker Network
+
+If your Traefik uses a different network name, update the `.env` file:
+
+```bash
+TRAEFIK_NETWORK=your-custom-network-name
+```
+
+### Troubleshooting Docker Deployment
+
+#### Container won't start
+
+```bash
+# Check container logs
+docker-compose logs bigheartedlabs
+
+# Check if port 80 inside container is accessible
+docker exec bigheartedlabs-web wget -O- http://localhost
+```
+
+#### Traefik can't reach the container
+
+```bash
+# Verify container is on Traefik network
+docker network inspect traefik
+
+# Check Traefik logs for routing errors
+docker logs traefik
+
+# Ensure Traefik labels are correct
+docker inspect bigheartedlabs-web | grep traefik
+```
+
+#### SSL certificate issues
+
+```bash
+# Check Traefik dashboard (if enabled) for certificate status
+
+# Verify certificate resolver name matches
+docker inspect bigheartedlabs-web | grep certresolver
+
+# Check Traefik certificate storage
+docker exec traefik cat /letsencrypt/acme.json
+```
+
+#### Website shows 404 or empty page
+
+```bash
+# Check if files were built correctly
+docker exec bigheartedlabs-web ls -la /usr/share/nginx/html
+
+# Verify nginx is serving files
+docker exec bigheartedlabs-web cat /etc/nginx/conf.d/default.conf
+
+# Test nginx configuration
+docker exec bigheartedlabs-web nginx -t
+```
+
+### Docker Deployment Benefits
+
+✅ **Isolated environment** - No conflicts with other services
+✅ **Easy updates** - Just pull and rebuild
+✅ **Consistent deployments** - Same environment everywhere
+✅ **Automatic SSL** - Traefik handles certificates
+✅ **Zero downtime updates** - Docker manages graceful restarts
+✅ **Health checks** - Automatic container restart if unhealthy
+✅ **Resource limits** - Can set CPU/memory limits if needed
+
+---
 
 ## Prerequisites
 
