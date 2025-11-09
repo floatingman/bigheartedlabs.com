@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 const sunIcon = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -77,13 +79,65 @@ const ThemeSwitcher = () => {
   );
 };
 
-export default function Footer({ copyrightText }) {
+export default function Footer({ companyName, copyrightText, contactEmail }) {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="py-16 flex flex-col items-center">
-      <p className="dark:text-white uppercase mb-3 font-bold opacity-60">
-        {copyrightText}
-      </p>
-      <ThemeSwitcher />
+    <footer className="py-12 border-t border-gray-200 dark:border-gray-800 mt-20">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+        <div>
+          <h3 className="text-xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            {companyName}
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            Expert staff augmentation for test automation and CI/CD implementation.
+          </p>
+        </div>
+
+        <div>
+          <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Quick Links</h4>
+          <ul className="space-y-2">
+            <li>
+              <Link href="/" className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                Home
+              </Link>
+            </li>
+            <li>
+              <Link href="/services" className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                Services
+              </Link>
+            </li>
+            <li>
+              <Link href="/about" className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                About
+              </Link>
+            </li>
+            <li>
+              <Link href="/contact" className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                Contact
+              </Link>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Contact</h4>
+          <p className="text-gray-600 dark:text-gray-400 mb-2">
+            <a href={`mailto:${contactEmail}`} className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+              {contactEmail}
+            </a>
+          </p>
+          <div className="mt-4">
+            <ThemeSwitcher />
+          </div>
+        </div>
+      </div>
+
+      <div className="text-center pt-8 border-t border-gray-200 dark:border-gray-800">
+        <p className="text-gray-600 dark:text-gray-400">
+          © {currentYear} {companyName}. {copyrightText}
+        </p>
+      </div>
     </footer>
   );
 }

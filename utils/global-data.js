@@ -1,17 +1,21 @@
 export const getGlobalData = () => {
-  const name = process.env.BLOG_NAME
-    ? decodeURI(process.env.BLOG_NAME)
-    : 'Jay Doe';
-  const blogTitle = process.env.BLOG_TITLE
-    ? decodeURI(process.env.BLOG_TITLE)
-    : 'Next.js Blog Theme';
-  const footerText = process.env.BLOG_FOOTER_TEXT
-    ? decodeURI(process.env.BLOG_FOOTER_TEXT)
+  const companyName = process.env.COMPANY_NAME
+    ? decodeURI(process.env.COMPANY_NAME)
+    : 'BigHearted Labs';
+  const tagline = process.env.TAGLINE
+    ? decodeURI(process.env.TAGLINE)
+    : 'Expert Test Automation & CI/CD Solutions';
+  const footerText = process.env.FOOTER_TEXT
+    ? decodeURI(process.env.FOOTER_TEXT)
     : 'All rights reserved.';
+  const contactEmail = process.env.CONTACT_EMAIL
+    ? decodeURI(process.env.CONTACT_EMAIL)
+    : 'contact@bigheartedlabs.com';
 
   return {
-    name,
-    blogTitle,
+    companyName,
+    tagline,
     footerText,
+    contactEmail,
   };
 };
