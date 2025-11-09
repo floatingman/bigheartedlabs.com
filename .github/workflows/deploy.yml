@@ -1,0 +1,114 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  build:
+    name: Build Static Site
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build site
+        run: npm run build
+        env:
+          COMPANY_NAME: "BigHearted Labs"
+          TAGLINE: "Expert Test Automation & CI/CD Solutions"
+          CONTACT_EMAIL: "contact@bigheartedlabs.com"
+          FOOTER_TEXT: "All rights reserved."
+
+      - name: Export static site
+        run: npm run export
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: static-site
+          path: out/
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: static-site
+          path: out/
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create backup on server
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "sudo mkdir -p ${{ secrets.DEPLOY_PATH }}.backup && \
+             sudo rm -rf ${{ secrets.DEPLOY_PATH }}.backup/* && \
+             sudo cp -r ${{ secrets.DEPLOY_PATH }}/* ${{ secrets.DEPLOY_PATH }}.backup/ 2>/dev/null || true"
+
+      - name: Create directory on server
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "sudo mkdir -p ${{ secrets.DEPLOY_PATH }} && \
+             sudo chown ${{ secrets.DEPLOY_USER }}:${{ secrets.DEPLOY_USER }} ${{ secrets.DEPLOY_PATH }}"
+
+      - name: Deploy to server
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            --progress \
+            ./out/ \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}/
+
+      - name: Set permissions
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "sudo chown -R www-data:www-data ${{ secrets.DEPLOY_PATH }} && \
+             sudo find ${{ secrets.DEPLOY_PATH }} -type d -exec chmod 755 {} \; && \
+             sudo find ${{ secrets.DEPLOY_PATH }} -type f -exec chmod 644 {} \;"
+
+      - name: Reload Nginx
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "sudo nginx -t && sudo systemctl reload nginx"
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "🌐 Website: https://${{ secrets.DEPLOY_HOST }}"
+          echo "📦 Files deployed to: ${{ secrets.DEPLOY_PATH }}"
