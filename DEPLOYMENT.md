@@ -16,127 +16,117 @@ This guide will help you deploy the BigHearted Labs consultancy website to your 
 
 If you're already running Traefik as your reverse proxy on ports 80/443, this is the recommended deployment method. The application will run in a Docker container and Traefik will handle SSL/TLS termination and routing.
 
+> **📘 Already have Traefik running?** See [TRAEFIK_INTEGRATION.md](TRAEFIK_INTEGRATION.md) for detailed instructions on integrating with your existing setup.
+
+### Two Integration Options
+
+#### Option 1: Add to Existing docker-compose.yml (Easiest)
+
+If you have Traefik in a docker-compose.yml file, just add the `bigheartedlabs` service to the same file:
+
+```bash
+# Navigate to where your Traefik docker-compose.yml is located
+cd ~/your-traefik-directory
+
+# Clone this repository
+git clone https://github.com/floatingman/bigheartedlabs.com.git
+
+# Add DOMAIN to your .env file
+echo "DOMAIN=bigheartedlabs.com" >> .env
+```
+
+Then add this service to your existing `docker-compose.yml`:
+
+```yaml
+  bigheartedlabs:
+    build:
+      context: ./bigheartedlabs.com
+      dockerfile: Dockerfile
+    container_name: bigheartedlabs-web
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bigheartedlabs.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.bigheartedlabs.entrypoints=web,websecure"
+      - "traefik.http.routers.bigheartedlabs.tls=true"
+      - "traefik.http.routers.bigheartedlabs.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.bigheartedlabs.loadbalancer.server.port=80"
+```
+
+Deploy:
+```bash
+docker-compose up -d bigheartedlabs
+```
+
+#### Option 2: Separate docker-compose.yml
+
+Keep BigHearted Labs in its own directory with its own docker-compose.yml:
+
+```bash
+# Clone the repository
+git clone https://github.com/floatingman/bigheartedlabs.com.git
+cd bigheartedlabs.com
+
+# Configure
+cp .env.example .env
+nano .env  # Set DOMAIN and CERT_RESOLVER
+
+# Deploy
+docker-compose up -d --build
+```
+
+This works because both compose stacks will be on the same Docker network by default.
+
 ### Prerequisites for Docker Deployment
 
 - Docker and Docker Compose installed on your server
 - Traefik running on ports 80/443
-- Traefik configured with a certificate resolver (e.g., Let's Encrypt)
-- A Docker network for Traefik (typically named `traefik`)
+- Traefik configured with a certificate resolver (e.g., `mytlschallenge`, `letsencrypt`)
+- Domain DNS pointing to your server
 
-### Step 1: Verify Traefik Setup
+### Configuration
 
-First, ensure your Traefik setup has the necessary components:
-
-```bash
-# Check if Traefik network exists
-docker network ls | grep traefik
-
-# If it doesn't exist, create it
-docker network create traefik
-
-# Verify Traefik is running
-docker ps | grep traefik
-```
-
-Your Traefik configuration should have:
-- An entrypoint for HTTP (typically named `web` on port 80)
-- An entrypoint for HTTPS (typically named `websecure` on port 443)
-- A certificate resolver configured (e.g., `letsencrypt`)
-
-Example Traefik static configuration (for reference):
-```yaml
-entryPoints:
-  web:
-    address: ":80"
-  websecure:
-    address: ":443"
-
-certificatesResolvers:
-  letsencrypt:
-    acme:
-      email: your-email@example.com
-      storage: /letsencrypt/acme.json
-      httpChallenge:
-        entryPoint: web
-```
-
-### Step 2: Clone Repository on Server
+Edit your `.env` file with these settings:
 
 ```bash
-# SSH into your server
-ssh your-username@your-server
-
-# Clone the repository
-git clone https://github.com/floatingman/bigheartedlabs.com.git
-cd bigheartedlabs.com
-```
-
-### Step 3: Configure Environment Variables
-
-Create a `.env` file from the example:
-
-```bash
-cp .env.example .env
-```
-
-Edit the `.env` file with your settings:
-
-```bash
-# Required: Your domain name
+# Your domain name
 DOMAIN=bigheartedlabs.com
 
-# Optional: Enable www subdomain (set to true or false)
+# Certificate resolver name (must match your Traefik config)
+# Check your Traefik docker-compose.yml for the cert resolver name
+CERT_RESOLVER=mytlschallenge
+
+# Optional: Enable www subdomain
 WWW_DOMAIN=true
-
-# Traefik network name (must match your Traefik network)
-TRAEFIK_NETWORK=traefik
-
-# Certificate resolver name (must match your Traefik configuration)
-CERT_RESOLVER=letsencrypt
 ```
 
-### Step 4: Build and Deploy
-
-```bash
-# Build and start the container
-docker-compose up -d --build
-
-# Check logs to ensure it started correctly
-docker-compose logs -f bigheartedlabs
-```
-
-### Step 5: Verify Deployment
+### Verify Deployment
 
 Visit your domain in a browser:
 - `https://bigheartedlabs.com` - Should load your site with HTTPS
 - `http://bigheartedlabs.com` - Should redirect to HTTPS
-- `https://www.bigheartedlabs.com` - Should also work (if WWW_DOMAIN=true)
 
 Check container health:
 ```bash
 # View running containers
-docker ps
-
-# Check container health status
-docker inspect bigheartedlabs-web | grep Health -A 10
+docker ps | grep bigheartedlabs
 
 # View application logs
-docker-compose logs bigheartedlabs
+docker logs bigheartedlabs-web
 ```
 
-### Updating the Docker Deployment
+### Updating
 
-When you need to update the website:
+To update the website content:
 
 ```bash
-# Pull latest changes
+cd ~/path/to/bigheartedlabs.com
 git pull origin main
-
-# Rebuild and restart the container
 docker-compose up -d --build
 
-# Remove old images (optional, to save space)
-docker image prune -f
+# Or if integrated into existing compose file:
+cd ~/your-traefik-directory
+docker-compose up -d --build bigheartedlabs
 ```
 
 ### Advanced Configuration

@@ -1,4 +1,7 @@
-version: '3.8'
+# Standalone docker-compose.yml for BigHearted Labs website
+# This file can be used standalone OR the bigheartedlabs service can be added to your existing docker-compose.yml
+
+version: '3.7'
 
 services:
   bigheartedlabs:
@@ -8,36 +11,29 @@ services:
     container_name: bigheartedlabs-web
     restart: unless-stopped
 
-    # Networks - connect to Traefik network
-    networks:
-      - traefik
-
     # Traefik labels
     labels:
       # Enable Traefik for this service
       - "traefik.enable=true"
 
-      # HTTP router
+      # HTTPS router
       - "traefik.http.routers.bigheartedlabs.rule=Host(`${DOMAIN:-bigheartedlabs.com}`)${WWW_DOMAIN:+ || Host(`www.${DOMAIN:-bigheartedlabs.com}`)}"
-      - "traefik.http.routers.bigheartedlabs.entrypoints=websecure"
+      - "traefik.http.routers.bigheartedlabs.entrypoints=web,websecure"
       - "traefik.http.routers.bigheartedlabs.tls=true"
-      - "traefik.http.routers.bigheartedlabs.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
-
-      # HTTP to HTTPS redirect
-      - "traefik.http.routers.bigheartedlabs-http.rule=Host(`${DOMAIN:-bigheartedlabs.com}`)${WWW_DOMAIN:+ || Host(`www.${DOMAIN:-bigheartedlabs.com}`)}"
-      - "traefik.http.routers.bigheartedlabs-http.entrypoints=web"
-      - "traefik.http.routers.bigheartedlabs-http.middlewares=https-redirect"
-      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.routers.bigheartedlabs.tls.certresolver=${CERT_RESOLVER:-mytlschallenge}"
 
       # Service configuration
       - "traefik.http.services.bigheartedlabs.loadbalancer.server.port=80"
 
-      # Optional: Add security headers middleware
-      - "traefik.http.middlewares.security-headers.headers.framedeny=true"
-      - "traefik.http.middlewares.security-headers.headers.browserxssfilter=true"
-      - "traefik.http.middlewares.security-headers.headers.contenttypenosniff=true"
-      - "traefik.http.routers.bigheartedlabs.middlewares=security-headers"
+      # Security headers middleware
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.framedeny=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.contenttypenosniff=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.sslredirect=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.stsSeconds=315360000"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.stsPreload=true"
+      - "traefik.http.routers.bigheartedlabs.middlewares=bigheartedlabs-headers@docker"
 
     # Health check
     healthcheck:
@@ -47,7 +43,12 @@ services:
       retries: 3
       start_period: 5s
 
-networks:
-  traefik:
-    external: true
-    name: ${TRAEFIK_NETWORK:-traefik}
+# Note: If using this as a standalone file with an existing Traefik instance,
+# ensure both are on the same Docker network. You can either:
+# 1. Add this service to your existing docker-compose.yml (recommended)
+# 2. Uncomment the networks section below and ensure it matches your Traefik network
+
+# networks:
+#   default:
+#     external: true
+#     name: ${TRAEFIK_NETWORK:-traefik_default}
