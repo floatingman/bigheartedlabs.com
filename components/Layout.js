@@ -1,6 +1,8 @@
 import classNames from 'classnames';
 import { useEffect } from 'react';
 import styles from './Layout.module.css';
+import Header from './Header';
+import Footer from './Footer';
 
 export function GradientBackground({ variant, className }) {
   const classes = classNames(
@@ -14,7 +16,7 @@ export function GradientBackground({ variant, className }) {
   return <div className={classes} />;
 }
 
-export default function Layout({ children }) {
+export default function Layout({ children, globalData, maxWidth = 'max-w-6xl' }) {
   const setAppTheme = () => {
     const darkMode = localStorage.getItem('theme') === 'dark';
     const lightMode = localStorage.getItem('theme') === 'light';
@@ -50,9 +52,17 @@ export default function Layout({ children }) {
   }, []);
 
   return (
-    <div className="relative pb-24 overflow-hidden">
-      <div className="flex flex-col items-center max-w-2xl w-full mx-auto">
-        {children}
+    <div className="relative min-h-screen bg-white dark:bg-gray-900">
+      <div className={`flex flex-col ${maxWidth} w-full mx-auto px-4 md:px-8`}>
+        <Header companyName={globalData?.companyName} />
+        <main className="flex-grow py-12">
+          {children}
+        </main>
+        <Footer
+          companyName={globalData?.companyName}
+          copyrightText={globalData?.footerText}
+          contactEmail={globalData?.contactEmail}
+        />
       </div>
     </div>
   );
