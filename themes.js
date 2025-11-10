@@ -17,15 +17,6 @@ exports.COLOR_THEMES = {
       'gradient-4': '#001AFF',
     },
   },
-  netlify: {
-    colors: {
-      primary: '#00A354',
-      'gradient-1': '#00F0FF',
-      'gradient-2': '#00F0FF',
-      'gradient-3': '#FAFF00',
-      'gradient-4': '#00F0FF',
-    },
-  },
   reddie: {
     colors: {
       primary: '#FF4D4D',
