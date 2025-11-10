@@ -35,22 +35,38 @@ git clone https://github.com/floatingman/bigheartedlabs.com.git
 echo "DOMAIN=bigheartedlabs.com" >> .env
 ```
 
-Then add this service to your existing `docker-compose.yml`:
+Then copy the service configuration from `bigheartedlabs.com/docker-compose.yml` into your existing `docker-compose.yml`. The service is already configured to pull from GitHub Container Registry:
 
 ```yaml
   bigheartedlabs:
-    build:
-      context: ./bigheartedlabs.com
-      dockerfile: Dockerfile
+    image: ghcr.io/floatingman/bigheartedlabs.com:latest
     container_name: bigheartedlabs-web
     restart: unless-stopped
+    pull_policy: always
+    env_file:
+      - ./bigheartedlabs.com/.env  # Adjust path if needed
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.bigheartedlabs.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.bigheartedlabs.rule=Host(`${DOMAIN:-bigheartedlabs.com}`)${WWW_DOMAIN:+ || Host(`www.${DOMAIN:-bigheartedlabs.com}`)}"
       - "traefik.http.routers.bigheartedlabs.entrypoints=web,websecure"
       - "traefik.http.routers.bigheartedlabs.tls=true"
-      - "traefik.http.routers.bigheartedlabs.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.bigheartedlabs.tls.certresolver=${CERT_RESOLVER:-mytlschallenge}"
       - "traefik.http.services.bigheartedlabs.loadbalancer.server.port=80"
+      # Security headers
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.framedeny=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.contenttypenosniff=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.sslredirect=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.stsSeconds=315360000"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.bigheartedlabs-headers.headers.stsPreload=true"
+      - "traefik.http.routers.bigheartedlabs.middlewares=bigheartedlabs-headers@docker"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 ```
 
 Deploy:
@@ -60,7 +76,7 @@ docker-compose up -d bigheartedlabs
 
 #### Option 2: Separate docker-compose.yml
 
-Keep Big Hearted Labs in its own directory with its own docker-compose.yml:
+Keep Big Hearted Labs in its own directory with its own docker-compose.yml. The included `docker-compose.yml` is already configured to pull from the container registry:
 
 ```bash
 # Clone the repository
@@ -71,11 +87,12 @@ cd bigheartedlabs.com
 cp .env.example .env
 nano .env  # Set DOMAIN and CERT_RESOLVER
 
-# Deploy
-docker-compose up -d --build
+# Deploy (pulls pre-built image from registry)
+docker compose pull
+docker compose up -d
 ```
 
-This works because both compose stacks will be on the same Docker network by default.
+This works because both compose stacks will be on the same Docker network by default. The image is automatically built and pushed to GitHub Container Registry via GitHub Actions on every commit to main.
 
 ### Prerequisites for Docker Deployment
 
@@ -117,16 +134,27 @@ docker logs bigheartedlabs-web
 
 ### Updating
 
-To update the website content:
+When new changes are pushed to the main branch, GitHub Actions automatically builds and pushes a new image to the container registry. To update your running container:
 
+**If using separate docker-compose.yml:**
+```bash
+cd ~/path/to/bigheartedlabs.com
+docker compose pull bigheartedlabs
+docker compose up -d bigheartedlabs
+```
+
+**If integrated into existing compose file:**
+```bash
+cd ~/your-traefik-directory
+docker compose pull bigheartedlabs
+docker compose up -d bigheartedlabs
+```
+
+You can also update the configuration files (docker-compose.yml, .env) from the repository:
 ```bash
 cd ~/path/to/bigheartedlabs.com
 git pull origin main
-docker-compose up -d --build
-
-# Or if integrated into existing compose file:
-cd ~/your-traefik-directory
-docker-compose up -d --build bigheartedlabs
+# Copy any updated configuration to your main docker-compose if needed
 ```
 
 ### Advanced Configuration
