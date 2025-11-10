@@ -94,11 +94,16 @@ jobs:
       - name: Add known hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+          echo "Scanning SSH keys for ${{ secrets.DEPLOY_HOST }}..."
+          ssh-keyscan -H -T 10 ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>&1 || {
+            echo "Warning: ssh-keyscan failed, will use StrictHostKeyChecking=accept-new"
+            echo "StrictHostKeyChecking=accept-new" >> ~/.ssh/config
+          }
+          echo "✅ SSH setup complete"
 
       - name: Pull latest Docker image and restart container
         run: |
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=accept-new ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
 
@@ -119,7 +124,7 @@ jobs:
 
       - name: Verify deployment
         run: |
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          ssh -o StrictHostKeyChecking=accept-new ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
             "cd ${{ secrets.DEPLOY_PATH }} && docker-compose ps bigheartedlabs"
 
       - name: Deployment summary
