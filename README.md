@@ -1,6 +1,4 @@
-![Netlify Next.js Blog Template designed by Bejamas](github-banner.svg)
-
-[![Deploy to Netlify Button](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/netlify-templates/nextjs-blog-theme)
+![Next.js Blog Theme designed by Bejamas](github-banner.svg)
 
 A customizable blog starter using:
 
@@ -9,13 +7,7 @@ A customizable blog starter using:
 - Built-in [MDX](https://mdxjs.com/) v1 support
 - Includes modern design with dark & light themes
 
-> 🎉 We’re really excited about the Bejamas + Netlify collaboration and we were going to celebrate it with some swag, but we realized we could put that money into supporting OSS and our ecosystem even more! After all, who needs another t-shirt or sticker?!
->
-> [Click this link](https://oss-form.netlify.app/) to vote for your favorite Open Source project!
-
 ![Preview of blog theme. Author named Jay Doe and blog's name is "Next.js Blog Theme" with one blog post](nextjs-blog-theme-preview.png)
-
-[Take a gander at the demo.](https://bejamas-nextjs-blog.netlify.app)
 
 [Click here to watch the template walkthrough!](https://www.youtube.com/watch?v=63QZHs259dY)
 
@@ -23,11 +15,9 @@ A customizable blog starter using:
 
 ---
 
-You can get started with this project in two ways: locally or using the [setup wizard](https://nextjs-wizard.netlify.app/).
-
 ### Setting Up Locally
 
-If you're doing it locally, start with clicking the [use this template](https://github.com/netlify-templates/nextjs-blog-theme/generate) button on GitHub. This will create a new repository with this template's files on your GitHub account. Once that is done, clone your new repository and navigate to it in your terminal.
+Start by cloning this repository and navigating to it in your terminal.
 
 From there, you can install the project's dependencies by running:
 
@@ -43,15 +33,9 @@ yarn run dev
 
 Open your browser and visit <http://localhost:3000>, your project should be running!
 
-### Using the Setup Wizard
-
-![Preview of Setup Wizard showing the initial page of a setup form](nextjs-setup-wizard.png)
-
-Through the [setup wizard](https://nextjs-wizard.netlify.app/), you can create your blog in a few clicks and deploy to Netlify.
-
 ## Configuring the blog
 
-The config is based on environment variables to make it easy to integrate with any Jamstack platform, like Netlify.
+The config is based on environment variables to make it easy to integrate with any Jamstack platform.
 
 Here are the variables you can edit:
 | Variable | Description | Options
@@ -63,11 +47,7 @@ Here are the variables you can edit:
 | `BLOG_FONT_HEADINGS` | the font-family for all HTML headings, from `h1` to `h6`| sans-serif (default), serif, monospace|
 | `BLOG_FONT_PARAGRAPHS` | the font-family for all other HTML elements | sans-serif (default), serif, monospace|
 
-All of the env variables can be configured through the [Wizard](https://nextjs-wizard.netlify.app/) or through setting the project's environment variables. You can do this in your Netlify dashaboard (Site settings/Build & deploy/Environment/Environment variables).
-
-https://user-images.githubusercontent.com/3611928/153997545-6dcdeef0-e570-49e7-93d6-ce0d393d16c9.mp4
-
-[alt: video walkthrough of editing env vars]
+All of the env variables can be configured through setting the project's environment variables in your deployment platform or locally in `.env` files.
 
 If setting an environment variable isn't your cup of tea, the defaults can be changed in [`utils/global-data.js`](/utils/global-data.js). You can also remove the variables and hard code blog information where these variables are used in the code base.
 
