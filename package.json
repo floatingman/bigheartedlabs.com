@@ -11,8 +11,10 @@
   "scripts": {
     "dev": "next",
     "dev:watch": "next-remote-watch ./posts",
+    "prebuild": "node scripts/check-env.js",
     "build": "next build",
     "start": "next start",
+    "preexport": "node scripts/check-env.js",
     "export": "next build && next export",
     "lint": "next lint"
   },
