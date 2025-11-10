@@ -1,6 +1,6 @@
-# Integrating BigHearted Labs with Your Existing Traefik Setup
+# Integrating Big Hearted Labs with Your Existing Traefik Setup
 
-This guide shows you how to add the BigHearted Labs website to your existing Traefik docker-compose.yml.
+This guide shows you how to add the Big Hearted Labs website to your existing Traefik docker-compose.yml.
 
 ## Quick Integration
 
@@ -64,7 +64,7 @@ docker-compose up -d bigheartedlabs
 
 ### Option 2: Separate docker-compose.yml File
 
-If you prefer to keep the BigHearted Labs deployment separate:
+If you prefer to keep the Big Hearted Labs deployment separate:
 
 1. Clone this repository to your server:
 ```bash
@@ -114,14 +114,14 @@ networks:
     external: true
 ```
 
-3. Uncomment the networks section in the BigHearted Labs docker-compose.yml
+3. Uncomment the networks section in the Big Hearted Labs docker-compose.yml
 
 ## Environment Variables
 
 Add these to your `.env` file:
 
 ```bash
-# BigHearted Labs Configuration
+# Big Hearted Labs Configuration
 DOMAIN=bigheartedlabs.com
 CERT_RESOLVER=mytlschallenge
 ```

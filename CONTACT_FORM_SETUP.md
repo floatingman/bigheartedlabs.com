@@ -126,14 +126,14 @@ Add a **Filter** node between Webhook and Email:
 Add another **Send Email** node that sends to `{{ $json.body.email }}`:
 
 ```
-Subject: Thanks for contacting BigHearted Labs
+Subject: Thanks for contacting Big Hearted Labs
 
 Hi {{ $json.body.name }},
 
 Thank you for reaching out! We've received your message and will get back to you within 24 hours.
 
 Best regards,
-BigHearted Labs Team
+Big Hearted Labs Team
 ```
 
 ### Add to Slack/Discord

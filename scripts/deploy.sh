@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-# Deployment Script for BigHearted Labs Website
+# Deployment Script for Big Hearted Labs Website
 # This script deploys the static site to your Ubuntu server via SSH
 ################################################################################
 
@@ -20,7 +20,7 @@ SERVER_PATH="${DEPLOY_PATH:-/var/www/bigheartedlabs}"
 SSH_KEY="${SSH_KEY_PATH:-$HOME/.ssh/id_rsa}"
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}BigHearted Labs - Deployment Script${NC}"
+echo -e "${GREEN}Big Hearted Labs - Deployment Script${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 

@@ -36,7 +36,7 @@ jobs:
       - name: Build site
         run: npm run build
         env:
-          COMPANY_NAME: "BigHearted Labs"
+          COMPANY_NAME: "Big Hearted Labs"
           TAGLINE: "Expert Test Automation & CI/CD Solutions"
           CONTACT_EMAIL: "contact@bigheartedlabs.com"
           FOOTER_TEXT: "All rights reserved."

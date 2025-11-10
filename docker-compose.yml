@@ -1,4 +1,4 @@
-# Standalone docker-compose.yml for BigHearted Labs website
+# Standalone docker-compose.yml for Big Hearted Labs website
 # This file can be used standalone OR the bigheartedlabs service can be added to your existing docker-compose.yml
 
 version: '3.7'
