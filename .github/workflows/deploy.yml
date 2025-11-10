@@ -114,7 +114,7 @@ jobs:
             docker pull ghcr.io/${{ github.repository }}:latest
 
             echo "🔄 Restarting container..."
-            docker-compose up -d --no-build bigheartedlabs
+            docker compose up -d --no-build bigheartedlabs
 
             echo "🧹 Cleaning up old images..."
             docker image prune -f
@@ -125,7 +125,7 @@ jobs:
       - name: Verify deployment
         run: |
           ssh -p 2222 -o StrictHostKeyChecking=accept-new ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "cd ${{ secrets.DEPLOY_PATH }} && docker-compose ps bigheartedlabs"
+            "cd ${{ secrets.DEPLOY_PATH }} && docker compose ps bigheartedlabs"
 
       - name: Deployment summary
         run: |
