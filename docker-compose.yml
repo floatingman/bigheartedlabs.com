@@ -5,11 +5,10 @@ version: '3.7'
 
 services:
   bigheartedlabs:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/floatingman/bigheartedlabs.com:latest
     container_name: bigheartedlabs-web
     restart: unless-stopped
+    pull_policy: always
 
     # Traefik labels
     labels:

@@ -13,43 +13,46 @@ on:
 
 jobs:
   build:
-    name: Build Static Site
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          node-version: '18'
-          cache: 'npm'
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run linter
-        run: npm run lint
-        continue-on-error: true
-
-      - name: Build site
-        run: npm run build
-        env:
-          COMPANY_NAME: "Big Hearted Labs"
-          TAGLINE: "Expert Test Automation & CI/CD Solutions"
-          CONTACT_EMAIL: "contact@bigheartedlabs.com"
-          FOOTER_TEXT: "All rights reserved."
-
-      - name: Export static site
-        run: npm run export
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          name: static-site
-          path: out/
-          retention-days: 7
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
     name: Deploy to Server
@@ -58,15 +61,6 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: static-site
-          path: out/
-
       - name: Validate deployment secrets
         run: |
           if [ -z "${{ secrets.DEPLOY_HOST }}" ]; then
@@ -74,7 +68,7 @@ jobs:
             echo "Please configure the following secrets in your repository:"
             echo "  - DEPLOY_HOST: The hostname or IP of your deployment server"
             echo "  - DEPLOY_USER: The SSH user for deployment"
-            echo "  - DEPLOY_PATH: The target path on the server"
+            echo "  - DEPLOY_PATH: The path to your docker-compose.yml on the server"
             echo "  - SSH_PRIVATE_KEY: The SSH private key for authentication"
             exit 1
           fi
@@ -99,41 +93,34 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Create backup on server
+      - name: Pull latest Docker image and restart container
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            echo "🔑 Logging in to GitHub Container Registry..."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            echo "📥 Pulling latest Docker image..."
+            docker pull ghcr.io/${{ github.repository }}:latest
+
+            echo "🔄 Restarting container..."
+            docker-compose up -d --no-build bigheartedlabs
+
+            echo "🧹 Cleaning up old images..."
+            docker image prune -f
+
+            echo "✅ Container restarted successfully!"
+          EOF
+
+      - name: Verify deployment
         run: |
           ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "sudo mkdir -p ${{ secrets.DEPLOY_PATH }}.backup && \
-             sudo rm -rf ${{ secrets.DEPLOY_PATH }}.backup/* && \
-             sudo cp -r ${{ secrets.DEPLOY_PATH }}/* ${{ secrets.DEPLOY_PATH }}.backup/ 2>/dev/null || true"
-
-      - name: Create directory on server
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "sudo mkdir -p ${{ secrets.DEPLOY_PATH }} && \
-             sudo chown ${{ secrets.DEPLOY_USER }}:${{ secrets.DEPLOY_USER }} ${{ secrets.DEPLOY_PATH }}"
-
-      - name: Deploy to server
-        run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            --progress \
-            ./out/ \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}/
-
-      - name: Set permissions
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "sudo chown -R www-data:www-data ${{ secrets.DEPLOY_PATH }} && \
-             sudo find ${{ secrets.DEPLOY_PATH }} -type d -exec chmod 755 {} \; && \
-             sudo find ${{ secrets.DEPLOY_PATH }} -type f -exec chmod 644 {} \;"
-
-      - name: Reload Nginx
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "sudo nginx -t && sudo systemctl reload nginx"
+            "cd ${{ secrets.DEPLOY_PATH }} && docker-compose ps bigheartedlabs"
 
       - name: Deployment summary
         run: |
           echo "✅ Deployment completed successfully!"
-          echo "🌐 Website: https://${{ secrets.DEPLOY_HOST }}"
-          echo "📦 Files deployed to: ${{ secrets.DEPLOY_PATH }}"
+          echo "🐳 Docker image: ghcr.io/${{ github.repository }}:latest"
+          echo "🌐 Container running on: ${{ secrets.DEPLOY_HOST }}"
