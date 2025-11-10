@@ -9,6 +9,8 @@ services:
     container_name: bigheartedlabs-web
     restart: unless-stopped
     pull_policy: always
+    env_file:
+      - .env
 
     # Traefik labels
     labels:

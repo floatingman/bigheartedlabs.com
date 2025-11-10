@@ -74,38 +74,108 @@ You can verify that environment variables are loaded by:
 
 ## Production Deployment
 
-### Docker Deployment
+### Important: How Production Environment Variables Work
 
-For Docker deployments, you have two options:
+This project uses **GitHub Actions for CI/CD**, which means:
 
-**Option A: Use `.env` file (recommended)**
+1. **Docker images are built in GitHub Actions**, not on your server
+2. **Next.js environment variables** must be available **during the GitHub Actions build**
+3. **The `.env` file on your server** only affects Docker Compose configuration (Traefik labels), NOT the Next.js application
 
-1. Create a `.env` file in your project root on the server:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your production values
-   ```
+### GitHub Actions Setup (Required)
 
-2. The `docker-compose.yml` will automatically load this file
+To set environment variables for your production builds, add them as **GitHub Secrets**:
 
-**Option B: Set in docker-compose.yml**
+1. Go to your GitHub repository
+2. Navigate to **Settings** → **Secrets and variables** → **Actions**
+3. Click **New repository secret**
+4. Add the following secrets:
 
-Add environment variables directly to `docker-compose.yml`:
+   **Application Secrets:**
+   - `COMPANY_NAME` - Your company name (e.g., "Big Hearted Labs")
+   - `TAGLINE` - Your company tagline
+   - `CONTACT_EMAIL` - Your contact email
+   - `FOOTER_TEXT` - Footer text (e.g., "All rights reserved.")
+   - `NEXT_PUBLIC_CONTACT_WEBHOOK_URL` - Your n8n webhook URL
 
-```yaml
-services:
-  web:
-    environment:
-      - NEXT_PUBLIC_CONTACT_WEBHOOK_URL=https://n8n.yourdomain.com/webhook/contact-form
-```
+   **Deployment Secrets (if not already set):**
+   - `DEPLOY_HOST` - Your server hostname or IP
+   - `DEPLOY_USER` - SSH user for deployment
+   - `DEPLOY_PATH` - Path to docker-compose.yml on server
+   - `SSH_PRIVATE_KEY` - SSH private key for authentication
 
-### Manual Deployment
+**Important:** After adding or changing GitHub Secrets, you must trigger a new build by pushing to the `main` branch or manually triggering the workflow.
 
-If deploying manually (not using Docker), set environment variables on your server:
+### Server-Side .env File (For Docker Compose)
+
+On your deployment server, create a `.env` file for Docker Compose configuration:
 
 ```bash
-# Add to your shell profile or deployment script
+# On your server, in the directory with docker-compose.yml
+cp .env.example .env
+```
+
+Edit the `.env` file with your Docker/Traefik settings:
+
+```bash
+# Domain Configuration
+DOMAIN=bigheartedlabs.com
+WWW_DOMAIN=true
+CERT_RESOLVER=mytlschallenge
+
+# Optional: Traefik network
+# TRAEFIK_NETWORK=traefik_default
+```
+
+**Note:** This `.env` file only affects:
+- Traefik routing labels (`DOMAIN`, `WWW_DOMAIN`)
+- Traefik certificate resolver (`CERT_RESOLVER`)
+- Docker networking (`TRAEFIK_NETWORK`)
+
+It does **NOT** affect the Next.js application code, which is baked into the Docker image during the GitHub Actions build.
+
+### How Environment Variables Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ GitHub Actions Build (on push to main)                     │
+│                                                             │
+│  GitHub Secrets → Docker build-args → Next.js build →      │
+│  Static HTML/JS with embedded values → Docker image        │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+                    Push to GitHub Container Registry
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Your Server                                                 │
+│                                                             │
+│  .env file → docker-compose.yml → Traefik labels only      │
+│  (Does NOT affect Next.js app inside container)            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Making Changes to Production
+
+**To update Next.js environment variables (contact form, company info):**
+1. Update the GitHub Secrets in your repository settings
+2. Push a commit to `main` or manually trigger the workflow
+3. GitHub Actions will rebuild with new values
+4. New image will be deployed automatically
+
+**To update Docker/Traefik configuration:**
+1. Edit the `.env` file on your server
+2. Run: `docker compose up -d bigheartedlabs`
+3. Changes apply immediately (no rebuild needed)
+
+### Manual Deployment (Without Docker)
+
+If deploying manually (not using Docker or GitHub Actions):
+
+```bash
+# Set environment variables on your server
 export NEXT_PUBLIC_CONTACT_WEBHOOK_URL=https://n8n.yourdomain.com/webhook/contact-form
+export COMPANY_NAME="Big Hearted Labs"
+# ... other variables
 
 # Then build and start
 npm run build
@@ -141,15 +211,39 @@ Only needed for Docker deployments:
 
 ## Troubleshooting
 
+### "Docker container not picking up .env file changes"
+
+**Symptoms:** You edit the `.env` file on your server, restart the container, but the changes don't appear in the application.
+
+**Solution:** This is because of how the build process works:
+
+1. **For Next.js app variables** (NEXT_PUBLIC_*, COMPANY_NAME, etc.):
+   - These are baked into the Docker image during the GitHub Actions build
+   - Editing `.env` on your server has NO effect on these
+   - **Fix:** Update GitHub Secrets and trigger a new build
+
+2. **For Docker Compose variables** (DOMAIN, CERT_RESOLVER, etc.):
+   - These DO get picked up from `.env`
+   - After editing `.env`, run: `docker compose up -d bigheartedlabs`
+   - Check: Ensure `env_file: - .env` is in your `docker-compose.yml`
+
 ### "Environment variable is undefined"
 
 **Symptoms:** Your code shows `undefined` for an environment variable.
 
 **Solutions:**
-1. Verify the variable is set in `.env.local` (for development)
+
+**For Local Development:**
+1. Verify the variable is set in `.env.local`
 2. Restart your dev server: `npm run dev`
 3. For client-side code, ensure the variable name starts with `NEXT_PUBLIC_`
 4. Check for typos in the variable name
+
+**For Production:**
+1. Check that the variable is set in GitHub Secrets
+2. Trigger a new build (push to main or manual workflow trigger)
+3. Wait for the build to complete and deploy
+4. Verify the new image was pulled on your server
 
 ### "Variable doesn't show in printenv"
 
