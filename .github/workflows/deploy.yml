@@ -67,6 +67,31 @@ jobs:
           name: static-site
           path: out/
 
+      - name: Validate deployment secrets
+        run: |
+          if [ -z "${{ secrets.DEPLOY_HOST }}" ]; then
+            echo "❌ Error: DEPLOY_HOST secret is not set"
+            echo "Please configure the following secrets in your repository:"
+            echo "  - DEPLOY_HOST: The hostname or IP of your deployment server"
+            echo "  - DEPLOY_USER: The SSH user for deployment"
+            echo "  - DEPLOY_PATH: The target path on the server"
+            echo "  - SSH_PRIVATE_KEY: The SSH private key for authentication"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DEPLOY_USER }}" ]; then
+            echo "❌ Error: DEPLOY_USER secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DEPLOY_PATH }}" ]; then
+            echo "❌ Error: DEPLOY_PATH secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "❌ Error: SSH_PRIVATE_KEY secret is not set"
+            exit 1
+          fi
+          echo "✅ All required secrets are configured"
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
