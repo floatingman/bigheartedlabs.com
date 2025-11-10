@@ -1,6 +1,6 @@
-# Deployment Guide - BigHearted Labs Website
+# Deployment Guide - Big Hearted Labs Website
 
-This guide will help you deploy the BigHearted Labs consultancy website to your Ubuntu server using static site hosting with Nginx.
+This guide will help you deploy the Big Hearted Labs consultancy website to your Ubuntu server using static site hosting with Nginx.
 
 ## Table of Contents
 
@@ -60,7 +60,7 @@ docker-compose up -d bigheartedlabs
 
 #### Option 2: Separate docker-compose.yml
 
-Keep BigHearted Labs in its own directory with its own docker-compose.yml:
+Keep Big Hearted Labs in its own directory with its own docker-compose.yml:
 
 ```bash
 # Clone the repository
@@ -413,7 +413,7 @@ You can customize the site using environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `COMPANY_NAME` | Company name | `BigHearted Labs` |
+| `COMPANY_NAME` | Company name | `Big Hearted Labs` |
 | `TAGLINE` | Company tagline | `Expert Test Automation & CI/CD Solutions` |
 | `CONTACT_EMAIL` | Contact email | `contact@bigheartedlabs.com` |
 | `FOOTER_TEXT` | Footer copyright text | `All rights reserved.` |

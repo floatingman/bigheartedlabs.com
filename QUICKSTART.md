@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get your BigHearted Labs website live in 15 minutes!
+Get your Big Hearted Labs website live in 15 minutes!
 
 ## 🚀 Fast Track Deployment
 

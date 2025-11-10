@@ -1,7 +1,7 @@
 export const getGlobalData = () => {
   const companyName = process.env.COMPANY_NAME
     ? decodeURI(process.env.COMPANY_NAME)
-    : 'BigHearted Labs';
+    : 'Big Hearted Labs';
   const tagline = process.env.TAGLINE
     ? decodeURI(process.env.TAGLINE)
     : 'Expert Test Automation & CI/CD Solutions';

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-# Ubuntu Server Setup Script for BigHearted Labs Website
+# Ubuntu Server Setup Script for Big Hearted Labs Website
 # Run this script on your Ubuntu server to set up Nginx and configure hosting
 ################################################################################
 
@@ -21,7 +21,7 @@ EMAIL=""
 DEPLOY_USER=$(whoami)
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}BigHearted Labs - Server Setup${NC}"
+echo -e "${BLUE}Big Hearted Labs - Server Setup${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
@@ -69,7 +69,7 @@ cat > /var/www/bigheartedlabs/index.html <<EOF
 <!DOCTYPE html>
 <html>
 <head>
-    <title>BigHearted Labs - Coming Soon</title>
+    <title>Big Hearted Labs - Coming Soon</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -90,7 +90,7 @@ cat > /var/www/bigheartedlabs/index.html <<EOF
 </head>
 <body>
     <div class="container">
-        <h1>BigHearted Labs</h1>
+        <h1>Big Hearted Labs</h1>
         <p>Coming Soon</p>
         <p style="font-size: 1em; opacity: 0.8;">Expert Test Automation & CI/CD Solutions</p>
     </div>
