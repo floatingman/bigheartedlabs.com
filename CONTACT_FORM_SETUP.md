@@ -35,18 +35,18 @@ The contact form will send submissions to an n8n webhook, which can then:
    - Configure:
      - **From Email**: Your email (e.g., `noreply@yourdomain.com`)
      - **To Email**: Where you want to receive submissions (e.g., `contact@bigheartedlabs.com`)
-     - **Subject**: `New Contact Form Submission from {{ $json.name }}`
+     - **Subject**: `New Contact Form Submission from {{ $json.body.name }}`
      - **Email Type**: Text or HTML
      - **Text/HTML**:
        ```
        New contact form submission:
 
-       Name: {{ $json.name }}
-       Email: {{ $json.email }}
-       Company: {{ $json.company }}
+       Name: {{ $json.body.name }}
+       Email: {{ $json.body.email }}
+       Company: {{ $json.body.company }}
 
        Message:
-       {{ $json.message }}
+       {{ $json.body.message }}
 
        ---
        Submitted at: {{ $now.format('YYYY-MM-DD HH:mm:ss') }}
@@ -58,7 +58,22 @@ The contact form will send submissions to an n8n webhook, which can then:
      - Username: Your email
      - Password: Your email password or app password
 
-5. **Activate the workflow:**
+5. **Add a Respond to Webhook node:**
+   - Click the **+** button after the Send Email node
+   - Search for **"Respond to Webhook"**
+   - Select **"Respond to Webhook"** node
+   - Configure:
+     - **Respond With**: JSON
+     - **Response Body**:
+       ```json
+       {
+         "success": true,
+         "message": "Thank you! We'll get back to you soon."
+       }
+       ```
+   - This sends a response back to the website confirming the submission was received
+
+6. **Activate the workflow:**
    - Click **"Activate"** toggle in the top right
    - Your workflow is now live!
 
@@ -108,12 +123,12 @@ Add a **Filter** node between Webhook and Email:
 
 ### Add Auto-Reply
 
-Add another **Send Email** node that sends to `{{ $json.email }}`:
+Add another **Send Email** node that sends to `{{ $json.body.email }}`:
 
 ```
 Subject: Thanks for contacting BigHearted Labs
 
-Hi {{ $json.name }},
+Hi {{ $json.body.name }},
 
 Thank you for reaching out! We've received your message and will get back to you within 24 hours.
 
@@ -128,10 +143,10 @@ Add a **Slack/Discord** node to notify your team instantly:
 ```
 New contact form submission!
 
-👤 Name: {{ $json.name }}
-📧 Email: {{ $json.email }}
-🏢 Company: {{ $json.company }}
-💬 Message: {{ $json.message }}
+👤 Name: {{ $json.body.name }}
+📧 Email: {{ $json.body.email }}
+🏢 Company: {{ $json.body.company }}
+💬 Message: {{ $json.body.message }}
 ```
 
 ### Store in Database
@@ -220,9 +235,9 @@ Here's a complete workflow you can import:
       "parameters": {
         "fromEmail": "noreply@bigheartedlabs.com",
         "toEmail": "contact@bigheartedlabs.com",
-        "subject": "=New Contact: {{ $json.name }}",
+        "subject": "=New Contact: {{ $json.body.name }}",
         "emailType": "text",
-        "text": "=Name: {{ $json.name }}\nEmail: {{ $json.email }}\nCompany: {{ $json.company }}\n\nMessage:\n{{ $json.message }}",
+        "text": "=Name: {{ $json.body.name }}\nEmail: {{ $json.body.email }}\nCompany: {{ $json.body.company }}\n\nMessage:\n{{ $json.body.message }}",
         "options": {}
       },
       "name": "Send Email",
