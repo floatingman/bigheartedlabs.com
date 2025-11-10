@@ -63,3 +63,92 @@ Since the posts are written in `MDX` format you can pass props and components. T
 https://user-images.githubusercontent.com/3611928/152727802-102ec296-41c8-446d-93ed-922d11187073.mp4
 
 [alt: video walkthrough of adding a new blog post]
+
+## Deployment
+
+---
+
+### Docker Deployment
+
+This project is configured for Docker-based deployment using a multi-stage build process. The Docker image builds the Next.js static site and serves it with nginx.
+
+#### Building the Docker Image
+
+To build the Docker image locally:
+
+```shell
+docker build -t bigheartedlabs:latest .
+```
+
+#### Running with Docker
+
+To run the container locally:
+
+```shell
+docker run -p 8080:80 bigheartedlabs:latest
+```
+
+Your site will be available at <http://localhost:8080>
+
+#### Deploying with Docker Compose
+
+The project includes a `docker-compose.yml` file configured for production deployment with Traefik reverse proxy.
+
+1. **Configure environment variables** (optional):
+   - `DOMAIN` - Your domain name (default: bigheartedlabs.com)
+   - `WWW_DOMAIN` - Set to enable www redirect
+   - `CERT_RESOLVER` - Traefik cert resolver name (default: mytlschallenge)
+   - `TRAEFIK_NETWORK` - Your Traefik network name (if using external network)
+
+2. **Deploy the service**:
+
+```shell
+docker-compose up -d
+```
+
+The service will automatically:
+- Pull the latest image from GitHub Container Registry
+- Configure Traefik labels for routing and SSL
+- Set up security headers
+- Enable health checks
+
+#### CI/CD Deployment
+
+The project uses GitHub Actions for automated deployment. When code is pushed to the main/master branch:
+
+1. **Build Stage**: A Docker image is built and pushed to GitHub Container Registry (ghcr.io)
+2. **Deploy Stage**: The image is deployed to your server via SSH
+
+**Required GitHub Secrets**:
+
+Configure these secrets in your repository settings (Settings → Secrets and variables → Actions):
+
+| Secret | Description |
+| --- | --- |
+| `DEPLOY_HOST` | The hostname or IP address of your deployment server |
+| `DEPLOY_USER` | The SSH user for deployment (e.g., `deploy` or `ubuntu`) |
+| `DEPLOY_PATH` | The path to your docker-compose.yml on the server (e.g., `/opt/bigheartedlabs`) |
+| `SSH_PRIVATE_KEY` | The SSH private key for authentication |
+
+**Deployment Process**:
+
+The automated deployment:
+1. Validates that all required secrets are configured
+2. Sets up SSH authentication
+3. Logs into GitHub Container Registry on the remote server
+4. Pulls the latest Docker image
+5. Restarts the container using docker-compose
+6. Cleans up old Docker images
+7. Verifies the deployment
+
+**Manual Deployment Trigger**:
+
+You can also manually trigger a deployment from the Actions tab by selecting "Build and Deploy" and clicking "Run workflow".
+
+#### Server Setup Requirements
+
+Your deployment server should have:
+- Docker and docker-compose installed
+- Traefik reverse proxy configured (if using Traefik labels)
+- SSH access configured for the deployment user
+- The `docker-compose.yml` file in the `DEPLOY_PATH` directory
