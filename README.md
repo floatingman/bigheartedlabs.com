@@ -123,12 +123,24 @@ The project uses GitHub Actions for automated deployment. When code is pushed to
 
 Configure these secrets in your repository settings (Settings → Secrets and variables → Actions):
 
-| Secret | Description |
-| --- | --- |
-| `DEPLOY_HOST` | The hostname or IP address of your deployment server |
-| `DEPLOY_USER` | The SSH user for deployment (e.g., `deploy` or `ubuntu`) |
-| `DEPLOY_PATH` | The path to your docker-compose.yml on the server (e.g., `/opt/bigheartedlabs`) |
-| `SSH_PRIVATE_KEY` | The SSH private key for authentication |
+**Application Secrets** (used during build):
+| Secret | Description | Required |
+| --- | --- | --- |
+| `NEXT_PUBLIC_CONTACT_WEBHOOK_URL` | n8n webhook URL for contact form (see `CONTACT_FORM_SETUP.md`) | **Yes** |
+| `COMPANY_NAME` | Company name (default: "Big Hearted Labs") | No |
+| `TAGLINE` | Company tagline | No |
+| `CONTACT_EMAIL` | Contact email address | No |
+| `FOOTER_TEXT` | Footer text | No |
+
+**Deployment Secrets** (for automated deployment):
+| Secret | Description | Required |
+| --- | --- | --- |
+| `DEPLOY_HOST` | The hostname or IP address of your deployment server | Yes |
+| `DEPLOY_USER` | The SSH user for deployment (e.g., `deploy` or `ubuntu`) | Yes |
+| `DEPLOY_PATH` | The path to your docker-compose.yml on the server (e.g., `/opt/bigheartedlabs`) | Yes |
+| `SSH_PRIVATE_KEY` | The SSH private key for authentication | Yes |
+
+> **⚠️ Important**: The contact form will not work until `NEXT_PUBLIC_CONTACT_WEBHOOK_URL` is configured. See `WEBHOOK_QUICKFIX.md` for setup instructions.
 
 **Deployment Process**:
 

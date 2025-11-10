@@ -25,7 +25,9 @@ export default function ContactForm() {
 
     if (!webhookUrl) {
       console.error('Contact webhook URL not configured');
-      setStatus('error');
+      console.error('Please set NEXT_PUBLIC_CONTACT_WEBHOOK_URL in GitHub Secrets');
+      console.error('See CONTACT_FORM_SETUP.md and ENVIRONMENT_SETUP.md for details');
+      setStatus('config_error');
       return;
     }
 
@@ -119,6 +121,12 @@ export default function ContactForm() {
       {status === 'success' && (
         <div className="p-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg">
           Thank you for your message! We&apos;ll get back to you soon.
+        </div>
+      )}
+
+      {status === 'config_error' && (
+        <div className="p-4 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300 rounded-lg">
+          Contact form is not configured yet. Please email us directly at the address below.
         </div>
       )}
 
